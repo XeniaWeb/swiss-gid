@@ -36,23 +36,29 @@ services:
     depends_on:
       - php
 
-  # PostgreSQL Service
-  postgres:
-    image: postgres:16-alpine
-    container_name: symfony_postgres
+  # MySQL Service
+  mysql:
+    image: mysql:8.0
+    container_name: symfony_mysql
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-symfony_db}
-      POSTGRES_USER: ${DB_USER:-symfony_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-symfony_password}
+      MYSQL_DATABASE: ${DB_NAME:-symfony_db}
+      MYSQL_USER: ${DB_USER:-symfony_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-symfony_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-symfony_root_password}
+      MYSQL_ROOT_HOST: '%'
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_PORT:-3306}:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
     networks:
       - symfony_network
-
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
   # Redis Service (optional, for caching)
   redis:
     image: redis:alpine
@@ -93,9 +99,23 @@ services:
     depends_on:
       - php
 
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    networks:
+      - symfony_network
+
 volumes:
-  postgres_data:
+  mysql_data:
+    driver: local
 
 networks:
   symfony_network:
-    driver: bridge 
+    driver: bridge
+
+
+
